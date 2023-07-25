@@ -353,7 +353,6 @@ CREATE TABLE IF NOT EXISTS Cancellations (
   `Confirmation` VARCHAR(100) NOT NULL
 );
 
--- Create the stored procedure 
 DELIMITER //
 CREATE PROCEDURE CancelOrder(IN input_orderID INT)
 BEGIN
@@ -373,4 +372,160 @@ DELIMITER ;
 CALL CancelOrder(105);
 
 SELECT * FROM Cancellations;
+
+
+-- Task 7: Add new data into Bookings Table (note I had to fabricate some columns that I
+-- have but the course instructions don't have.
+
+INSERT INTO Bookings
+(BookingID, Date, TableNumber, CustomerID, BookingTime, EmployeeID)
+VALUES
+(1, '2022-10-10', 5, 101, '18:00:00', 6),
+(2, '2022-11-12', 3, 103, '18:00:00', 6),
+(3, '2022-10-11', 2, 102, '18:00:00', 6),
+(4, '2022-10-13', 2, 101, '18:00:00', 6);
+
+
+-- Task 8: Stored procedure to check table status
+
+-- Create the stored procedure 'CheckBooking'
+DELIMITER //
+CREATE PROCEDURE CheckBooking(IN input_bookingDate DATETIME, IN input_tableNumber INT)
+BEGIN
+    DECLARE booking_status VARCHAR(100);
+    
+    -- Check if the table is already booked for the given date and table number
+    IF EXISTS (
+        SELECT 1
+        FROM Bookings
+        WHERE `Date` = input_bookingDate AND TableNumber = input_tableNumber
+    ) THEN
+        SET booking_status = CONCAT('Table ', input_tableNumber, ' is already booked');
+    ELSE
+        SET booking_status = CONCAT('Table ', input_tableNumber, ' is free');
+    END IF;
+    
+    -- Return the booking status
+    SELECT booking_status AS 'Booking status';
+END //
+DELIMITER ;
+
+-- Calling the procedure:
+
+CALL CheckBooking('2022-11-12',3);
+
+
+-- Task 9: Create Stored Procedure with Transcation
+
+-- Create the stored procedure 'AddValidBooking'
+DELIMITER //
+CREATE PROCEDURE AddValidBooking(IN input_bookingDate DATETIME, IN input_tableNumber INT)
+BEGIN
+    DECLARE booking_status VARCHAR(100);
+    DECLARE customer_id INT DEFAULT 111;
+    DECLARE employee_id INT DEFAULT 1;
+    
+    START TRANSACTION;
+    
+    -- Check if the table is already booked for the given date and table number
+    IF EXISTS (
+        SELECT 1
+        FROM Bookings
+        WHERE `Date` = input_bookingDate AND TableNumber = input_tableNumber
+    ) THEN
+        SET booking_status = CONCAT('Table ', input_tableNumber, ' is already booked - booking cancelled');
+        ROLLBACK;
+    ELSE
+        -- Add the new booking record
+        INSERT INTO Bookings (`Date`, TableNumber, CustomerID, BookingTime, EmployeeID)
+        VALUES (input_bookingDate, input_tableNumber, customer_id, NOW(), employee_id);
+        
+        SET booking_status = CONCAT('Table ', input_tableNumber, ' is booked successfully');
+        COMMIT;
+    END IF;
+    
+    -- Return the booking status
+    SELECT booking_status AS 'Booking status';
+END //
+DELIMITER ;
+
+-- Call the Procedure
+
+CALL AddValidBooking('2022-12-17', 6);
+
+
+
+-- Task 10: Stored Procedure (Insert Into)
+
+DELIMITER //
+
+DELIMITER //
+CREATE PROCEDURE AddBooking(
+    IN p_BookingID INT,
+    IN p_Date DATE,
+    IN p_TableNumber INT,
+    IN p_CustomerID INT,
+    IN p_BookingTime TIME,
+    IN p_EmployeeID INT
+)
+BEGIN
+    INSERT INTO Bookings (BookingID, Date, TableNumber, CustomerID, BookingTime, EmployeeID)
+    VALUES (p_BookingID, p_Date, p_TableNumber, p_CustomerID, p_BookingTime, p_EmployeeID);
+    
+    SELECT 'New Booking Added' AS Confirmation;
+END //
+DELIMITER ;
+
+
+-- Calling the stored procedure
+
+CALL AddBooking(225, '2023-07-07', 1, '112', '18:00:00', 1);
+
+
+
+-- Task 11: Stored procedure (updating records)
+
+DELIMITER //
+CREATE PROCEDURE UpdateBooking(
+    IN p_BookingID INT,
+    IN p_BookingDate DATE
+)
+BEGIN
+    UPDATE Bookings
+    SET Date = p_BookingDate
+    WHERE BookingID = p_BookingID;
+
+    SELECT CONCAT('Booking ', p_BookingID, ' Updated') AS Confirmation;
+END //
+DELIMITER ;
+
+
+-- Call the stored procedure
+
+CALL UpdateBooking(207, '2023-01-01');
+
+
+-- Task 12: Stored Procedure (Cancelling Booking)
+
+DELIMITER //
+CREATE PROCEDURE CancelBooking(
+    IN p_BookingID INT
+)
+BEGIN
+    DELETE FROM Bookings
+    WHERE BookingID = p_BookingID;
+
+    SELECT CONCAT('Booking ', p_BookingID, ' Cancelled') AS Confirmation;
+END //
+DELIMITER ;
+
+-- Call Stored Procedure
+
+CALL CancelBooking(203);
+
+-- End of week two
+
+
+
+
 
